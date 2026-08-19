@@ -71,9 +71,9 @@ def extrair_dados_porto(texto):
     dados["Vidros"] = "Completo" if dados["Franquia_Vidros"] != "Não Contratado" else "Não Contratado"
     
     # Pagamentos
-    dados["Pag_Cartao"] = "À vista: R$ 4.966,54<br/>4x R$ 1.306,99 | 6x R$ 871,33<br/>10x R$ 522,80 | 12x R$ 435,66"
-    dados["Pag_Boleto"] = "À vista: R$ 5.227,98<br/>4x R$ 1.405,54 | 6x R$ 982,60<br/>10x R$ 646,70 | 12x R$ 563,75"
-    dados["Pag_Debito"] = "À vista: R$ 4.966,54<br/>4x R$ 1.306,99 | 6x R$ 928,58<br/>10x R$ 611,41 | 12x R$ 526,89"
+    dados["Pag_Cartao"] = "<b>À vista:</b> R$ 4.966,54<br/><b>4x</b> R$ 1.306,99 | <b>6x</b> R$ 871,33<br/><b>10x</b> R$ 522,80 | <b>12x</b> R$ 435,66"
+    dados["Pag_Boleto"] = "<b>À vista:</b> R$ 5.227,98<br/><b>4x</b> R$ 1.405,54 | <b>6x</b> R$ 982,60<br/><b>10x</b> R$ 646,70 | <b>12x</b> R$ 563,75"
+    dados["Pag_Debito"] = "<b>À vista:</b> R$ 4.966,54<br/><b>4x</b> R$ 1.306,99 | <b>6x</b> R$ 928,58<br/><b>10x</b> R$ 611,41 | <b>12x</b> R$ 526,89"
     dados["Telefone 24h"] = "0800 727 2766"
     
     return dados
@@ -125,9 +125,9 @@ def extrair_dados_tokio(texto):
     dados["Vidros"] = "Completo" if dados["Franquia_Vidros"] != "Não Contratado" else "Não Contratado"
     
     # Pagamentos
-    dados["Pag_Cartao"] = "À vista: R$ 4.959,93<br/>4x R$ 1.239,91 | 6x R$ 826,57<br/>10x R$ 495,91 | 12x R$ 413,25"
-    dados["Pag_Boleto"] = "À vista: R$ 4.959,93<br/>4x R$ 1.239,91 | 6x R$ 919,99<br/>10x R$ 647,69 | 12x N/A"
-    dados["Pag_Debito"] = "À vista: R$ 4.959,93<br/>4x R$ 1.239,91 | 6x R$ 857,99<br/>10x R$ 587,66 | 12x R$ 507,89"
+    dados["Pag_Cartao"] = "<b>À vista:</b> R$ 4.959,93<br/><b>4x</b> R$ 1.239,91 | <b>6x</b> R$ 826,57<br/><b>10x</b> R$ 495,91 | <b>12x</b> R$ 413,25"
+    dados["Pag_Boleto"] = "<b>À vista:</b> R$ 4.959,93<br/><b>4x</b> R$ 1.239,91 | <b>6x</b> R$ 919,99<br/><b>10x</b> R$ 647,69 | <b>12x</b> N/A"
+    dados["Pag_Debito"] = "<b>À vista:</b> R$ 4.959,93<br/><b>4x</b> R$ 1.239,91 | <b>6x</b> R$ 857,99<br/><b>10x</b> R$ 587,66 | <b>12x</b> R$ 507,89"
     dados["Telefone 24h"] = "0800 31 TOKIO"
     
     return dados
@@ -174,9 +174,9 @@ def extrair_dados_allianz(texto):
     dados["Vidros"] = "Completo" if dados["Franquia_Vidros"] != "Não Contratado" else "Não Contratado"
     
     # Pagamentos
-    dados["Pag_Cartao"] = "À vista: R$ 3.183,26<br/>4x R$ 795,81 | 6x R$ 530,54<br/>10x R$ 318,32 | 12x N/A"
-    dados["Pag_Boleto"] = "À vista: R$ 3.183,26<br/>4x R$ 854,96 | 6x R$ 597,29<br/>10x R$ 392,61 | 12x N/A"
-    dados["Pag_Debito"] = "À vista: R$ 3.183,26<br/>4x R$ 795,81 | 6x R$ 530,54<br/>10x R$ 361,55 | 12x N/A"
+    dados["Pag_Cartao"] = "<b>À vista:</b> R$ 3.183,26<br/><b>4x</b> R$ 795,81 | <b>6x</b> R$ 530,54<br/><b>10x</b> R$ 318,32 | <b>12x</b> N/A"
+    dados["Pag_Boleto"] = "<b>À vista:</b> R$ 3.183,26<br/><b>4x</b> R$ 854,96 | <b>6x</b> R$ 597,29<br/><b>10x</b> R$ 392,61 | <b>12x</b> N/A"
+    dados["Pag_Debito"] = "<b>À vista:</b> R$ 3.183,26<br/><b>4x</b> R$ 795,81 | <b>6x</b> R$ 530,54<br/><b>10x</b> R$ 361,55 | <b>12x</b> N/A"
     dados["Telefone 24h"] = "0800 011 5215"
     
     return dados
@@ -192,8 +192,9 @@ def gerar_pdf_bks(lista_cotacoes):
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=13, textColor=colors.HexColor('#0B2F64'), leading=15, alignment=1)
     subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#333333'), alignment=1)
     section_style = ParagraphStyle('SectionStyle', parent=styles['Heading2'], fontSize=8.5, textColor=colors.white, backColor=colors.HexColor('#0B2F64'), borderPadding=3, spaceBefore=5, spaceAfter=3)
-    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=6.5, leading=8)
-    bold_cell_style = ParagraphStyle('BoldCellStyle', parent=styles['Normal'], fontSize=6.5, leading=8, fontName='Helvetica-Bold')
+    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=6.5, leading=8.5)
+    pag_cell_style = ParagraphStyle('PagCellStyle', parent=styles['Normal'], fontSize=6.5, leading=9.5)
+    bold_cell_style = ParagraphStyle('BoldCellStyle', parent=styles['Normal'], fontSize=6.5, leading=8.5, fontName='Helvetica-Bold')
 
     if logo_filename:
         img = Image(logo_filename, width=110, height=35)
@@ -217,6 +218,16 @@ def gerar_pdf_bks(lista_cotacoes):
         ('ALIGN', (1,0), (-1,-1), 'CENTER'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('PADDING', (0,0), (-1,-1), 2),
+    ])
+
+    # Estilo com espaçamento maior para a tabela de Preços
+    t_pag_style = TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#E6EEF8')),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#0B2F64')),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#D0D7DE')),
+        ('ALIGN', (1,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('PADDING', (0,0), (-1,-1), 4),
     ])
 
     # 1. PERFIL
@@ -275,7 +286,7 @@ def gerar_pdf_bks(lista_cotacoes):
     matriz_franq = [
         headers,
         [Paragraph("Franquia Casco (Veículo)", cell_style)] + [Paragraph(c["Franquia_Casco"], cell_style) for c in lista_cotacoes],
-        [Paragraph("Franquia Vidros / Retrovisores / Faróis", cell_style)] + [Paragraph(c["Franquia_Vidros"], cell_style) for c in lista_cotacoes],
+        [Paragraph("Franquia Vidros / Lanternas / Retrovisores / Faróis", cell_style)] + [Paragraph(c["Franquia_Vidros"], cell_style) for c in lista_cotacoes],
     ]
     t_franq = Table(matriz_franq, colWidths=widths)
     t_franq.setStyle(t_style)
@@ -288,7 +299,7 @@ def gerar_pdf_bks(lista_cotacoes):
         headers,
         [Paragraph("Assistência 24h (KM)", cell_style)] + [Paragraph(c["Assistência"], cell_style) for c in lista_cotacoes],
         [Paragraph("Carro Reserva", cell_style)] + [Paragraph(c["Carro Reserva"], cell_style) for c in lista_cotacoes],
-        [Paragraph("Vidros / Faróis / Lanternas", cell_style)] + [Paragraph(c["Vidros"], cell_style) for c in lista_cotacoes],
+        [Paragraph("Vidros / Lanternas / Retrovisores / Faróis", cell_style)] + [Paragraph(c["Vidros"], cell_style) for c in lista_cotacoes],
     ]
     t_serv = Table(matriz_serv, colWidths=widths)
     t_serv.setStyle(t_style)
@@ -299,13 +310,13 @@ def gerar_pdf_bks(lista_cotacoes):
     story.append(Paragraph("6. PREÇOS E OPÇÕES DE PAGAMENTO", section_style))
     matriz_pag = [
         headers,
-        [Paragraph("<b>Cartão de Crédito</b><br/>(À Vista, 4x, 6x, 10x, 12x)", cell_style)] + [Paragraph(c["Pag_Cartao"], cell_style) for c in lista_cotacoes],
-        [Paragraph("<b>Boleto Bancário</b><br/>(À Vista, 4x, 6x, 10x, 12x)", cell_style)] + [Paragraph(c["Pag_Boleto"], cell_style) for c in lista_cotacoes],
-        [Paragraph("<b>Débito em Conta</b><br/>(À Vista, 4x, 6x, 10x, 12x)", cell_style)] + [Paragraph(c["Pag_Debito"], cell_style) for c in lista_cotacoes],
+        [Paragraph("<b>Cartão de Crédito</b><br/>(À Vista, 4x, 6x, 10x, 12x)", cell_style)] + [Paragraph(c["Pag_Cartao"], pag_cell_style) for c in lista_cotacoes],
+        [Paragraph("<b>Boleto Bancário</b><br/>(À Vista, 4x, 6x, 10x, 12x)", cell_style)] + [Paragraph(c["Pag_Boleto"], pag_cell_style) for c in lista_cotacoes],
+        [Paragraph("<b>Débito em Conta</b><br/>(À Vista, 4x, 6x, 10x, 12x)", cell_style)] + [Paragraph(c["Pag_Debito"], pag_cell_style) for c in lista_cotacoes],
         [Paragraph("Telefone 24h Seguradora", cell_style)] + [Paragraph(c["Telefone 24h"], cell_style) for c in lista_cotacoes],
     ]
     t_pag = Table(matriz_pag, colWidths=widths)
-    t_pag.setStyle(t_style)
+    t_pag.setStyle(t_pag_style)
     story.append(t_pag)
 
     doc.build(story)
