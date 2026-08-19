@@ -231,32 +231,34 @@ def extrair_dados_allianz(texto):
 
 def gerar_pdf_bks(lista_cotacoes):
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=15, bottomMargin=15)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=20, bottomMargin=35)
     story = []
     
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=13, textColor=colors.HexColor('#0B2F64'), leading=15, alignment=1)
-    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#333333'), alignment=1)
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=13, textColor=colors.HexColor('#0B2F64'), leading=15, alignment=0)
+    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#333333'), alignment=0)
     section_style = ParagraphStyle('SectionStyle', parent=styles['Heading2'], fontSize=8.5, textColor=colors.white, backColor=colors.HexColor('#0B2F64'), borderPadding=3, spaceBefore=5, spaceAfter=3)
     cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=6.5, leading=8.5)
     center_cell_style = ParagraphStyle('CenterCellStyle', parent=styles['Normal'], fontSize=6.5, leading=8.5, alignment=1)
     center_pag_cell_style = ParagraphStyle('CenterPagCellStyle', parent=styles['Normal'], fontSize=6.5, leading=9.5, alignment=1)
     bold_cell_style = ParagraphStyle('BoldCellStyle', parent=styles['Normal'], fontSize=6.5, leading=8.5, fontName='Helvetica-Bold')
     center_bold_cell_style = ParagraphStyle('CenterBoldCellStyle', parent=styles['Normal'], fontSize=6.5, leading=8.5, fontName='Helvetica-Bold', alignment=1)
+    footer_style = ParagraphStyle('FooterStyle', parent=styles['Normal'], fontSize=6, textColor=colors.HexColor('#555555'), alignment=1, leading=8)
 
-    # Inserção segura do Logo via ReportLab
+    # Inserção do Logo alinhado à direita
     if logo_path and os.path.exists(logo_path):
         try:
             img = RLImage(logo_path, width=110, height=35)
-            img.hAlign = 'CENTER'
+            img.hAlign = 'RIGHT'
             story.append(img)
-            story.append(Spacer(1, 3))
+            story.append(Spacer(1, 6))
         except Exception:
             pass
 
+    # Cabeçalho com espaçamento do topo
     story.append(Paragraph("<b>BKS CORRETORA DE SEGUROS</b>", title_style))
     story.append(Paragraph("RESUMO COMPARATIVO DE COTAÇÕES - SEGURO AUTOMÓVEL", subtitle_style))
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 6))
     
     base = lista_cotacoes[0]
     col_width = 415 / len(lista_cotacoes) if lista_cotacoes else 200
@@ -370,6 +372,17 @@ def gerar_pdf_bks(lista_cotacoes):
     t_pag = Table(matriz_pag, colWidths=widths)
     t_pag.setStyle(t_pag_style)
     story.append(t_pag)
+    story.append(Spacer(1, 8))
+
+    # Validade e Consultor
+    story.append(Paragraph("<b>Validade do orçamento:</b> A confirmar", cell_style))
+    story.append(Spacer(1, 2))
+    story.append(Paragraph("<b>Consultor BKS:</b> Nome do Consultor | Telefone: (11) 4615-1000", cell_style))
+    story.append(Spacer(1, 10))
+
+    # Rodapé fixo centralizado
+    endereco_bks = "BKS Corretora de Seguros Ltda. – Rodovia Raposo Tavares, s/n – Km 22,140 – Open Mall The Square – Bloco B – Sala 07 – Granja Viana – Cotia/SP – Cep 06709-900"
+    story.append(Paragraph(endereco_bks, footer_style))
 
     doc.build(story)
     buffer.seek(0)
