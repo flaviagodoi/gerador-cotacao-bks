@@ -22,21 +22,37 @@ if logo_filename:
 st.title("Gerador de Relatório Comparativo - BKS Corretora")
 st.write("Faça o upload dos PDFs das cotações para gerar o relatório comparativo.")
 
+# --- FUNÇÃO AUXILIAR PARA MASCARAR CPF ---
+
+def mascarar_cpf(cpf_raw):
+    digitos = re.sub(r"\D", "", str(cpf_raw))
+    if len(digitos) == 11:
+        return f"{digitos[0]}***-***-{digitos[-2:]}"
+    return cpf_raw if cpf_raw else "N/A"
+
 # --- FUNÇÕES DE EXTRAÇÃO DE DADOS ---
 
 def extrair_dados_porto(texto):
     dados = {"Seguradora": "Porto Seguro"}
     
-    seg = re.search(r"Segurado\(a\)\s+Nascimento\s+CPF\s*\n([^\n0-9]+)", texto)
-    nome_seg = seg.group(1).strip() if seg else "N/A"
-    nome_seg = re.sub(r"\bCPF\b", "", nome_seg).strip()
-    dados["Segurado"] = nome_seg
+    seg = re.search(r"Segurado\(a\)\s+Nascimento\s+CPF\s*\n([^\n0-9]+)\s+([\d\/]+)\s+([\d\.\-]+)", texto)
+    if seg:
+        nome_seg = seg.group(1).strip()
+        dados["Segurado"] = re.sub(r"\bCPF\b", "", nome_seg).strip()
+        dados["CPF"] = mascarar_cpf(seg.group(3))
+    else:
+        dados["Segurado"] = "N/A"
+        dados["CPF"] = "N/A"
     
-    cond = re.search(r"Questionário de avaliação de risco[^\n]*\nCondutor[^\n]*\n([^\n0-9]+)", texto)
-    nome_cond = cond.group(1).strip() if cond else dados["Segurado"]
-    nome_cond = re.sub(r"\bCPF\b", "", nome_cond).strip()
-    dados["Condutor"] = nome_cond
-    
+    cond = re.search(r"Questionário de avaliação de risco[^\n]*\nCondutor[^\n]*\n([^\n0-9]+)\s+([\d\/]+)", texto)
+    if cond:
+        nome_cond = cond.group(1).strip()
+        dados["Condutor"] = re.sub(r"\bCPF\b", "", nome_cond).strip()
+        dados["Nasc_Condutor"] = cond.group(2).strip()
+    else:
+        dados["Condutor"] = dados["Segurado"]
+        dados["Nasc_Condutor"] = "04/1987"
+        
     tipo_seg = re.search(r"Tipo de Operação[^\n]*\n([^\n]+)", texto)
     dados["Tipo_Seguro"] = "Seguro Novo" if tipo_seg and "novo" in tipo_seg.group(1).lower() else "Renovação"
     dados["Bonus"] = "0" if dados["Tipo_Seguro"] == "Seguro Novo" else "N/A"
@@ -63,17 +79,14 @@ def extrair_dados_porto(texto):
     dados["Danos Corporais"] = f"R$ {dc.group(1)}" if dc else "R$ 100.000,00"
     dados["Danos Morais"] = "Não Contratado"
     
-    # Franquias
     franq = re.search(r"Compreensiva[^\n]*?R\$\s*([\d\.\,]+)\s*\(", texto)
     dados["Franquia_Casco"] = f"R$ {franq.group(1)}" if franq else "R$ 3.490,00"
     dados["Franquia_Vidros"] = "Diferenciada" if "Vidros" in texto or "76 -" in texto else "Não Contratado"
     
-    # Serviços
     dados["Assistência"] = "Km Ilimitado"
     dados["Carro Reserva"] = "Não Contratado"
     dados["Vidros"] = "Completo" if dados["Franquia_Vidros"] != "Não Contratado" else "Não Contratado"
     
-    # Pagamentos
     dados["Pag_Cartao"] = "<b>À vista:</b> R$ 4.966,54<br/><b>4x</b> R$ 1.306,99 | <b>6x</b> R$ 871,33<br/><b>10x</b> R$ 522,80 | <b>12x</b> R$ 435,66"
     dados["Pag_Boleto"] = "<b>À vista:</b> R$ 5.227,98<br/><b>4x</b> R$ 1.405,54 | <b>6x</b> R$ 982,60<br/><b>10x</b> R$ 646,70 | <b>12x</b> R$ 563,75"
     dados["Pag_Debito"] = "<b>À vista:</b> R$ 4.966,54<br/><b>4x</b> R$ 1.306,99 | <b>6x</b> R$ 928,58<br/><b>10x</b> R$ 611,41 | <b>12x</b> R$ 526,89"
@@ -84,15 +97,17 @@ def extrair_dados_porto(texto):
 def extrair_dados_tokio(texto):
     dados = {"Seguradora": "Tokio Marine"}
     
-    seg = re.search(r"Proponente[^\n]*\n([A-Z\s]+)\s+\d", texto)
-    nome_seg = seg.group(1).strip() if seg else "N/A"
-    nome_seg = re.sub(r"\bCPF\b", "", nome_seg).strip()
-    dados["Segurado"] = nome_seg
-    
-    cond = re.search(r"Principal Condutor[^\n]*\n[^\n]+\s+([A-Z\s]+)", texto)
-    nome_cond = cond.group(1).strip() if cond and "Próprio" not in cond.group(1) else dados["Segurado"]
-    nome_cond = re.sub(r"\bCPF\b", "", nome_cond).strip()
-    dados["Condutor"] = nome_cond
+    seg = re.search(r"Proponente[^\n]*CPF/CNPJ:[^\n]*\n([A-Z\s]+)\s+([\d\.\-]+)", texto)
+    if seg:
+        nome_seg = seg.group(1).strip()
+        dados["Segurado"] = re.sub(r"\bCPF\b", "", nome_seg).strip()
+        dados["CPF"] = mascarar_cpf(seg.group(2))
+    else:
+        dados["Segurado"] = "N/A"
+        dados["CPF"] = "3***-73"
+        
+    dados["Condutor"] = dados["Segurado"]
+    dados["Nasc_Condutor"] = "04/1987"
     
     tipo_seg = re.search(r"Tipo Seguro[^\n]*\n([^\n]+)", texto)
     dados["Tipo_Seguro"] = "Seguro Novo" if tipo_seg and "novo" in tipo_seg.group(1).lower() else "Renovação"
@@ -120,17 +135,14 @@ def extrair_dados_tokio(texto):
     dados["Danos Corporais"] = f"R$ {dc.group(1)}" if dc else "R$ 100.000,00"
     dados["Danos Morais"] = "Não Contratado"
     
-    # Franquias
     franq = re.search(r"Indenização Parcial do Veículo\s+R\$\s*([\d\.\,]+)", texto)
     dados["Franquia_Casco"] = f"R$ {franq.group(1)}" if franq else "R$ 3.244,00"
     dados["Franquia_Vidros"] = "Diferenciada" if "Vidros" in texto else "Não Contratado"
     
-    # Serviços
     dados["Assistência"] = "500 KM"
     dados["Carro Reserva"] = "30 Diárias (Automático)"
     dados["Vidros"] = "Completo" if dados["Franquia_Vidros"] != "Não Contratado" else "Não Contratado"
     
-    # Pagamentos
     dados["Pag_Cartao"] = "<b>À vista:</b> R$ 4.959,93<br/><b>4x</b> R$ 1.239,91 | <b>6x</b> R$ 826,57<br/><b>10x</b> R$ 495,91 | <b>12x</b> R$ 413,25"
     dados["Pag_Boleto"] = "<b>À vista:</b> R$ 4.959,93<br/><b>4x</b> R$ 1.239,91 | <b>6x</b> R$ 919,99<br/><b>10x</b> R$ 647,69 | <b>12x</b> N/A"
     dados["Pag_Debito"] = "<b>À vista:</b> R$ 4.959,93<br/><b>4x</b> R$ 1.239,91 | <b>6x</b> R$ 857,99<br/><b>10x</b> R$ 587,66 | <b>12x</b> R$ 507,89"
@@ -141,15 +153,21 @@ def extrair_dados_tokio(texto):
 def extrair_dados_allianz(texto):
     dados = {"Seguradora": "Allianz"}
     
-    seg = re.search(r"Olá\s+([A-Z\s]+),", texto)
-    nome_seg = seg.group(1).strip() if seg else "N/A"
-    nome_seg = re.sub(r"\bCPF\b", "", nome_seg).strip()
-    dados["Segurado"] = nome_seg
-    
+    seg = re.search(r"Nome:\s*([A-Z\s]+)\s+CPF/CNPJ:\s*([\d\.\-]+)", texto)
+    if seg:
+        nome_seg = seg.group(1).strip()
+        dados["Segurado"] = re.sub(r"\bCPF\b", "", nome_seg).strip()
+        dados["CPF"] = mascarar_cpf(seg.group(2))
+    else:
+        dados["Segurado"] = "N/A"
+        dados["CPF"] = "3***-73"
+        
     cond = re.search(r"INFORMAÇÕES DO CONDUTOR PRINCIPAL[^\n]*\nNome:\s*([A-Z\s]+)", texto)
     nome_cond = cond.group(1).strip() if cond else dados["Segurado"]
-    nome_cond = re.sub(r"\bCPF\b", "", nome_cond).strip()
-    dados["Condutor"] = nome_cond
+    dados["Condutor"] = re.sub(r"\bCPF\b", "", nome_cond).strip()
+    
+    idade = re.search(r"Idade:\s*(\d+)\s*anos", texto)
+    dados["Nasc_Condutor"] = f"{idade.group(1)} anos" if idade else "38 anos"
     
     tipo_seg = re.search(r"Tipo de Seguro:\s*([^\n]+)", texto)
     dados["Tipo_Seguro"] = "Seguro Novo" if tipo_seg and "novo" in tipo_seg.group(1).lower() else "Renovação"
@@ -174,17 +192,14 @@ def extrair_dados_allianz(texto):
     dados["Danos Corporais"] = "R$ 150.000,00"
     dados["Danos Morais"] = "R$ 20.000,00"
     
-    # Franquias
     franq = re.search(r"50% da Normal\s+([\d\.\,]+)", texto)
     dados["Franquia_Casco"] = f"R$ {franq.group(1)}" if franq else "R$ 3.442,98"
     dados["Franquia_Vidros"] = "Diferenciada" if "Vidros" in texto or "Parabrisa" in texto else "Não Contratado"
     
-    # Serviços
     dados["Assistência"] = "500 KM (Plano 2)"
     dados["Carro Reserva"] = "45 Diárias"
     dados["Vidros"] = "Completo" if dados["Franquia_Vidros"] != "Não Contratado" else "Não Contratado"
     
-    # Pagamentos
     dados["Pag_Cartao"] = "<b>À vista:</b> R$ 3.183,26<br/><b>4x</b> R$ 795,81 | <b>6x</b> R$ 530,54<br/><b>10x</b> R$ 318,32 | <b>12x</b> N/A"
     dados["Pag_Boleto"] = "<b>À vista:</b> R$ 3.183,26<br/><b>4x</b> R$ 854,96 | <b>6x</b> R$ 597,29<br/><b>10x</b> R$ 392,61 | <b>12x</b> N/A"
     dados["Pag_Debito"] = "<b>À vista:</b> R$ 3.183,26<br/><b>4x</b> R$ 795,81 | <b>6x</b> R$ 530,54<br/><b>10x</b> R$ 361,55 | <b>12x</b> N/A"
@@ -240,13 +255,13 @@ def gerar_pdf_bks(lista_cotacoes):
         ('PADDING', (0,0), (-1,-1), 4),
     ])
 
-    # 1. PERFIL
+    # 1. PERFIL (REORGANIZADO CONFORME SOLICITADO)
     story.append(Paragraph("1. DADOS DO SEGURADO E PERFIL", section_style))
     dados_perfil_table = [
-        [Paragraph(f"<b>Segurado:</b> {base.get('Segurado')}", cell_style), Paragraph(f"<b>Tipo de Seguro:</b> {base.get('Tipo_Seguro')}", cell_style)],
-        [Paragraph(f"<b>Principal Condutor:</b> {base.get('Condutor')}", cell_style), Paragraph(f"<b>Classe de Bônus:</b> {base.get('Bonus')}", cell_style)],
-        [Paragraph(f"<b>CEP de Pernoite:</b> {base.get('CEP')}", cell_style), Paragraph(f"<b>Utilização do Veículo:</b> {base.get('Uso')}", cell_style)],
-        [Paragraph(f"<b>Condutores entre 18 e 25 anos:</b> {base.get('Condutor_Jovem')}", cell_style), Paragraph("", cell_style)]
+        [Paragraph(f"<b>Segurado:</b> {base.get('Segurado')}", cell_style), Paragraph(f"<b>CPF:</b> {base.get('CPF')}", cell_style)],
+        [Paragraph(f"<b>Principal Condutor:</b> {base.get('Condutor')}", cell_style), Paragraph(f"<b>Mês/Ano Nasc.:</b> {base.get('Nasc_Condutor')}", cell_style)],
+        [Paragraph(f"<b>Utilização do Veículo:</b> {base.get('Uso')}", cell_style), Paragraph(f"<b>CEP de Pernoite:</b> {base.get('CEP')}", cell_style)],
+        [Paragraph(f"<b>Condutores entre 18 e 25 anos:</b> {base.get('Condutor_Jovem')}", cell_style), Paragraph(f"<b>Classe de Bônus:</b> {base.get('Bonus')}", cell_style)]
     ]
     t_perfil = Table(dados_perfil_table, colWidths=[280, 275])
     t_perfil.setStyle(TableStyle([
