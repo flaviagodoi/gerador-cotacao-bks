@@ -72,8 +72,6 @@ def extrair_dados_porto(texto):
     dados["FIPE"] = "150924"
     dados["Blindado"] = "Não"
     dados["Kit_Gas"] = "Não"
-    
-    # Rastreador
     dados["Rastreador"] = '<font color="red">Obrigatória a instalação</font>' if "rastreador" in texto.lower() or "dispositivo" in texto.lower() else "Não se Aplica"
     
     dm = re.search(r"RCF-V Danos Materiais\s+R\$\s*([\d\.\,]+)", texto)
@@ -86,10 +84,12 @@ def extrair_dados_porto(texto):
     franq = re.search(r"Compreensiva[^\n]*?R\$\s*([\d\.\,]+)\s*\(", texto)
     dados["Franquia_Casco"] = f"R$ {franq.group(1)}" if franq else "R$ 3.490,00"
     dados["Franquia_Vidros"] = "Diferenciada" if "Vidros" in texto or "76 -" in texto else "Não Contratado"
+    dados["Franquia_Terceiros"] = "Não Possui"
     
-    dados["Assistência"] = "Km Ilimitado"
+    dados["Assistência"] = "Km ilimitado"
     dados["Carro Reserva"] = "Não Contratado"
     dados["Vidros"] = "Completo" if dados["Franquia_Vidros"] != "Não Contratado" else "Não Contratado"
+    dados["Vidros_Logomarca"] = "Sim" if "logomarca" in texto.lower() or "original" in texto.lower() else "Não"
     
     dados["Pag_Cartao"] = "<b>À vista:</b> R$ 4.966,54<br/><b>4x</b> R$ 1.306,99 | <b>6x</b> R$ 871,33<br/><b>10x</b> R$ 522,80 | <b>12x</b> R$ 435,66"
     dados["Pag_Boleto"] = "<b>À vista:</b> R$ 5.227,98<br/><b>4x</b> R$ 1.405,54 | <b>6x</b> R$ 982,60<br/><b>10x</b> R$ 646,70 | <b>12x</b> R$ 563,75"
@@ -143,10 +143,14 @@ def extrair_dados_tokio(texto):
     franq = re.search(r"Indenização Parcial do Veículo\s+R\$\s*([\d\.\,]+)", texto)
     dados["Franquia_Casco"] = f"R$ {franq.group(1)}" if franq else "R$ 3.244,00"
     dados["Franquia_Vidros"] = "Diferenciada" if "Vidros" in texto else "Não Contratado"
+    dados["Franquia_Terceiros"] = "Não Possui"
     
-    dados["Assistência"] = "500 KM"
+    dados["Assistência"] = "500 Km"
     dados["Carro Reserva"] = "30 Diárias (Automático)"
     dados["Vidros"] = "Completo" if dados["Franquia_Vidros"] != "Não Contratado" else "Não Contratado"
+    
+    logo = re.search(r"Logomarca\s*\(vidros\)\s*([^\n]+)", texto)
+    dados["Vidros_Logomarca"] = "Sim" if logo and "possui" in logo.group(1).lower() and "não" not in logo.group(1).lower() else "Não"
     
     dados["Pag_Cartao"] = "<b>À vista:</b> R$ 4.959,93<br/><b>4x</b> R$ 1.239,91 | <b>6x</b> R$ 826,57<br/><b>10x</b> R$ 495,91 | <b>12x</b> R$ 413,25"
     dados["Pag_Boleto"] = "<b>À vista:</b> R$ 4.959,93<br/><b>4x</b> R$ 1.239,91 | <b>6x</b> R$ 919,99<br/><b>10x</b> R$ 647,69 | <b>12x</b> N/A"
@@ -201,10 +205,12 @@ def extrair_dados_allianz(texto):
     franq = re.search(r"50% da Normal\s+([\d\.\,]+)", texto)
     dados["Franquia_Casco"] = f"R$ {franq.group(1)}" if franq else "R$ 3.442,98"
     dados["Franquia_Vidros"] = "Diferenciada" if "Vidros" in texto or "Parabrisa" in texto else "Não Contratado"
+    dados["Franquia_Terceiros"] = "Não Possui"
     
-    dados["Assistência"] = "500 KM (Plano 2)"
+    dados["Assistência"] = "500 Km (Plano 2)"
     dados["Carro Reserva"] = "45 Diárias"
     dados["Vidros"] = "Completo" if dados["Franquia_Vidros"] != "Não Contratado" else "Não Contratado"
+    dados["Vidros_Logomarca"] = "Sim" if "logomarca" in texto.lower() or "original" in texto.lower() else "Não"
     
     dados["Pag_Cartao"] = "<b>À vista:</b> R$ 3.183,26<br/><b>4x</b> R$ 795,81 | <b>6x</b> R$ 530,54<br/><b>10x</b> R$ 318,32 | <b>12x</b> N/A"
     dados["Pag_Boleto"] = "<b>À vista:</b> R$ 3.183,26<br/><b>4x</b> R$ 854,96 | <b>6x</b> R$ 597,29<br/><b>10x</b> R$ 392,61 | <b>12x</b> N/A"
@@ -299,7 +305,7 @@ def gerar_pdf_bks(lista_cotacoes):
     story.append(t_veic)
     story.append(Spacer(1, 3))
     
-    # 3. COBERTURAS PRINCIPAIS (CENTRALIZADO)
+    # 3. COBERTURAS PRINCIPAIS
     story.append(Paragraph("3. COBERTURAS PRINCIPAIS", section_style))
     matriz_cob = [
         headers,
@@ -313,32 +319,34 @@ def gerar_pdf_bks(lista_cotacoes):
     story.append(t_cob)
     story.append(Spacer(1, 3))
 
-    # 4. FRANQUIAS (CENTRALIZADO)
+    # 4. FRANQUIAS
     story.append(Paragraph("4. FRANQUIAS DA APÓLICE", section_style))
     matriz_franq = [
         headers,
         [Paragraph("Franquia Casco (Veículo)", cell_style)] + [Paragraph(c["Franquia_Casco"], center_cell_style) for c in lista_cotacoes],
         [Paragraph("Franquia Vidros / Lanternas / Retrovisores / Faróis", cell_style)] + [Paragraph(c["Franquia_Vidros"], center_cell_style) for c in lista_cotacoes],
+        [Paragraph("Franquia para atendimento a terceiros", cell_style)] + [Paragraph(c["Franquia_Terceiros"], center_cell_style) for c in lista_cotacoes],
     ]
     t_franq = Table(matriz_franq, colWidths=widths)
     t_franq.setStyle(t_style)
     story.append(t_franq)
     story.append(Spacer(1, 3))
 
-    # 5. CLÁUSULAS E SERVIÇOS ADICIONAIS (CENTRALIZADO)
+    # 5. CLÁUSULAS E SERVIÇOS ADICIONAIS
     story.append(Paragraph("5. CLAÚSULAS E SERVIÇOS ADICIONAIS", section_style))
     matriz_serv = [
         headers,
-        [Paragraph("Assistência 24h (KM)", cell_style)] + [Paragraph(c["Assistência"], center_cell_style) for c in lista_cotacoes],
+        [Paragraph("Assistência 24h", cell_style)] + [Paragraph(c["Assistência"], center_cell_style) for c in lista_cotacoes],
         [Paragraph("Carro Reserva", cell_style)] + [Paragraph(c["Carro Reserva"], center_cell_style) for c in lista_cotacoes],
         [Paragraph("Vidros / Lanternas / Retrovisores / Faróis", cell_style)] + [Paragraph(c["Vidros"], center_cell_style) for c in lista_cotacoes],
+        [Paragraph("Vidros com Logomarca", cell_style)] + [Paragraph(c["Vidros_Logomarca"], center_cell_style) for c in lista_cotacoes],
     ]
     t_serv = Table(matriz_serv, colWidths=widths)
     t_serv.setStyle(t_style)
     story.append(t_serv)
     story.append(Spacer(1, 3))
 
-    # 6. PREÇOS E OPÇÕES DE PAGAMENTO (CENTRALIZADO)
+    # 6. PREÇOS E OPÇÕES DE PAGAMENTO
     story.append(Paragraph("6. PREÇOS E OPÇÕES DE PAGAMENTO", section_style))
     matriz_pag = [
         headers,
