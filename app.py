@@ -41,8 +41,8 @@ def extrair_dados_porto(texto):
     dados["Tipo_Seguro"] = "Seguro Novo" if tipo_seg and "novo" in tipo_seg.group(1).lower() else "Renovação"
     dados["Bonus"] = "0" if dados["Tipo_Seguro"] == "Seguro Novo" else "N/A"
     
-    dados["FIPE"] = "150924"
-    dados["Veiculo"] = f"HB20 PREMIUM 1.6 16V FLEX AUT. 2016/2017 (FIPE: {dados['FIPE']})"
+    veic = re.search(r"HB20 PREMIUM[^\n]+", texto)
+    dados["Veiculo"] = veic.group(0).strip() if veic else "HB20 PREMIUM 1.6 16V FLEX AUT."
     dados["Placa"] = "A/A (Novo/Isento)"
     
     uso = re.search(r"Tipo de uso\s+CEP de pernoite[^\n]*\n([A-Za-z]+)\s+([\d\-]+)", texto)
@@ -50,7 +50,9 @@ def extrair_dados_porto(texto):
     dados["CEP"] = uso.group(2).strip() if uso else "04705-080"
     
     dados["Condutor_Jovem"] = "Não"
+    dados["Ano_Modelo"] = "2016 / 2017"
     dados["Combustivel"] = "GASOLINA/ALCOOL"
+    dados["FIPE"] = "150924"
     dados["Blindado"] = "Não"
     dados["Kit_Gas"] = "Não"
     
@@ -96,8 +98,8 @@ def extrair_dados_tokio(texto):
     dados["Tipo_Seguro"] = "Seguro Novo" if tipo_seg and "novo" in tipo_seg.group(1).lower() else "Renovação"
     dados["Bonus"] = "0" if dados["Tipo_Seguro"] == "Seguro Novo" else "N/A"
     
-    dados["FIPE"] = "015092-4"
-    dados["Veiculo"] = f"HYUNDAI HB20 HATCH PREMIUM 1.6 2017/2017 (FIPE: {dados['FIPE']})"
+    veic = re.search(r"HYUNDAI[^\n]+", texto)
+    dados["Veiculo"] = veic.group(0).strip() if veic else "HYUNDAI HB20 HATCH PREMIUM 1.6"
     dados["Placa"] = "A/A (Novo)"
     dados["Uso"] = "Particular"
     
@@ -105,7 +107,9 @@ def extrair_dados_tokio(texto):
     dados["CEP"] = cep.group(1).strip() if cep else "04705-080"
     
     dados["Condutor_Jovem"] = "Não"
+    dados["Ano_Modelo"] = "2017 / 2017"
     dados["Combustivel"] = "Flex"
+    dados["FIPE"] = "015092-4"
     dados["Blindado"] = "Não"
     dados["Kit_Gas"] = "Não"
     
@@ -153,14 +157,16 @@ def extrair_dados_allianz(texto):
     bonus = re.search(r"Classe Bônus:\s*([\d]+)", texto)
     dados["Bonus"] = bonus.group(1).strip() if bonus else "0"
     
-    dados["FIPE"] = "015092-4"
-    dados["Veiculo"] = f"HYUNDAI HB20 PREMIUM 1.6 2019/2019 (FIPE: {dados['FIPE']})"
+    veic = re.search(r"HYUNDAI[^\n]+", texto)
+    dados["Veiculo"] = veic.group(0).strip() if veic else "HYUNDAI HB20 PREMIUM 1.6"
     dados["Placa"] = "A/A (Novo)"
     dados["CEP"] = "04705-080"
     dados["Uso"] = "Particular"
     
     dados["Condutor_Jovem"] = "Não"
+    dados["Ano_Modelo"] = "2019 / 2019"
     dados["Combustivel"] = "Flex"
+    dados["FIPE"] = "015092-4"
     dados["Blindado"] = "Não"
     dados["Kit_Gas"] = "Não"
     
@@ -256,8 +262,10 @@ def gerar_pdf_bks(lista_cotacoes):
     # 2. VEÍCULO
     story.append(Paragraph("2. DADOS DO VEÍCULO", section_style))
     dados_veic_table = [
-        [Paragraph(f"<b>Veículo:</b> {base.get('Veiculo')}", cell_style), Paragraph(f"<b>Placa:</b> {base.get('Placa')}", cell_style)],
-        [Paragraph(f"<b>Combustível:</b> {base.get('Combustivel')}", cell_style), Paragraph(f"<b>Kit Gás:</b> {base.get('Kit_Gas')} | <b>Blindagem:</b> {base.get('Blindado')}", cell_style)]
+        [Paragraph(f"<b>Veículo:</b> {base.get('Veiculo')}", cell_style), Paragraph(f"<b>Ano/Modelo:</b> {base.get('Ano_Modelo')}", cell_style)],
+        [Paragraph(f"<b>Placa:</b> {base.get('Placa')}", cell_style), Paragraph(f"<b>Combustível:</b> {base.get('Combustivel')}", cell_style)],
+        [Paragraph(f"<b>Código FIPE:</b> {base.get('FIPE')}", cell_style), Paragraph(f"<b>Kit Gás:</b> {base.get('Kit_Gas')}", cell_style)],
+        [Paragraph(f"<b>Blindagem:</b> {base.get('Blindado')}", cell_style), Paragraph("", cell_style)]
     ]
     t_veic = Table(dados_veic_table, colWidths=[280, 275])
     t_veic.setStyle(TableStyle([
