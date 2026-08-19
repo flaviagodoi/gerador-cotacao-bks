@@ -3,21 +3,30 @@ import pdfplumber
 import re
 import os
 from io import BytesIO
+from PIL import Image as PILImage
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
 st.set_page_config(page_title="BKS Corretora", page_icon="🚗", layout="wide")
 
-logo_filename = None
-if os.path.exists("logo.png"):
-    logo_filename = "logo.png"
-elif os.path.exists("logo.jpg"):
-    logo_filename = "logo.jpg"
+# --- TRATAMENTO E LOCALIZAÇÃO DO LOGO ---
 
-if logo_filename:
-    st.image(logo_filename, width=220)
+def obter_logo_path():
+    arquivos_possiveis = [
+        "logo_bks.png", "logo_bks.jpg", "logo_bks.jpeg", "LOGO_BKS.PNG", "LOGO_BKS.JPG",
+        "logo.png", "logo.jpg", "logo.jpeg", "LOGO.PNG", "LOGO.JPG"
+    ]
+    for arq in arquivos_possiveis:
+        if os.path.exists(arq):
+            return arq
+    return None
+
+logo_path = obter_logo_path()
+
+if logo_path:
+    st.image(logo_path, width=220)
 
 st.title("Gerador de Relatório Comparativo - BKS Corretora")
 st.write("Faça o upload dos PDFs das cotações para gerar o relatório comparativo.")
@@ -235,11 +244,15 @@ def gerar_pdf_bks(lista_cotacoes):
     bold_cell_style = ParagraphStyle('BoldCellStyle', parent=styles['Normal'], fontSize=6.5, leading=8.5, fontName='Helvetica-Bold')
     center_bold_cell_style = ParagraphStyle('CenterBoldCellStyle', parent=styles['Normal'], fontSize=6.5, leading=8.5, fontName='Helvetica-Bold', alignment=1)
 
-    if logo_filename:
-        img = Image(logo_filename, width=110, height=35)
-        img.hAlign = 'CENTER'
-        story.append(img)
-        story.append(Spacer(1, 3))
+    # Inserção segura do Logo via ReportLab
+    if logo_path and os.path.exists(logo_path):
+        try:
+            img = RLImage(logo_path, width=110, height=35)
+            img.hAlign = 'CENTER'
+            story.append(img)
+            story.append(Spacer(1, 3))
+        except Exception:
+            pass
 
     story.append(Paragraph("<b>BKS CORRETORA DE SEGUROS</b>", title_style))
     story.append(Paragraph("RESUMO COMPARATIVO DE COTAÇÕES - SEGURO AUTOMÓVEL", subtitle_style))
