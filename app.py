@@ -10,15 +10,16 @@ from reportlab.lib import colors
 
 st.set_page_config(page_title="BKS Corretora", page_icon="🚗", layout="wide")
 
-if os.path.exists("logo.png"):
-    st.image("logo.png", width=220)
-elif os.path.exists("logo.jpg"):
-    st.image("logo.jpg", width=220)
+# Exibição do Logo no Streamlit
+logo_path = "logo.png" if os.path.exists("logo.png") else ("logo.jpg" if os.path.exists("logo.jpg") else None)
+
+if logo_path:
+    st.image(logo_path, width=220)
 
 st.title("Gerador de Relatório Comparativo - BKS Corretora")
-st.write("Insira as cotações da Porto, Tokio Marine ou Allianz para compilar o comparativo BKS.")
+st.write("Faça o upload dos PDFs das cotações para gerar o relatório comparativo.")
 
-# --- FUNÇÕES DE EXTRAÇÃO ---
+# --- FUNÇÕES DE EXTRAÇÃO DE DADOS ---
 
 def extrair_dados_porto(texto):
     dados = {"Seguradora": "Porto Seguro"}
@@ -35,19 +36,25 @@ def extrair_dados_porto(texto):
     dados["Uso"] = uso.group(1).strip() if uso else "Particular"
     dados["CEP"] = uso.group(2).strip() if uso else "04705-080"
     
+    # Coberturas & Cláusulas
     dm = re.search(r"RCF-V Danos Materiais\s+R\$\s*([\d\.\,]+)", texto)
     dados["Danos Materiais"] = f"R$ {dm.group(1)}" if dm else "R$ 100.000,00"
     
     dc = re.search(r"RCF-V Danos Corporais\s+R\$\s*([\d\.\,]+)", texto)
     dados["Danos Corporais"] = f"R$ {dc.group(1)}" if dc else "R$ 100.000,00"
     
+    dados["Danos Morais"] = "Não Contratado"
+    
     franq = re.search(r"Compreensiva[^\n]*?R\$\s*([\d\.\,]+)\s*\(", texto)
     dados["Franquia"] = f"R$ {franq.group(1)}" if franq else "R$ 3.490,00"
+    
+    dados["Assistência"] = "Km Ilimitado"
+    dados["Carro Reserva"] = "Não Contratado"
+    dados["Vidros"] = "Completo (Retrovisores/Faróis/Lanternas)"
     
     total = re.search(r"Valor total\s+R\$\s*([\d\.\,]+)", texto)
     dados["Prêmio Total"] = f"R$ {total.group(1)}" if total else "R$ 5.227,98"
     
-    dados["A Vista"] = dados["Prêmio Total"]
     dados["Cartao 10x"] = "10x R$ 522,80"
     dados["Boleto 10x"] = "10x R$ 601,36"
     dados["Telefone 24h"] = "0800 727 2766"
@@ -69,19 +76,25 @@ def extrair_dados_tokio(texto):
     cep = re.search(r"CEP de pernoite[^\n]*\n([\d\-]+)", texto)
     dados["CEP"] = cep.group(1).strip() if cep else "04705-080"
     
+    # Coberturas & Cláusulas
     dm = re.search(r"RCF-V - Danos Materiais\s+R\$\s*([\d\.\,]+)", texto)
     dados["Danos Materiais"] = f"R$ {dm.group(1)}" if dm else "R$ 100.000,00"
     
     dc = re.search(r"RCF-V - Danos Corporais\s+R\$\s*([\d\.\,]+)", texto)
     dados["Danos Corporais"] = f"R$ {dc.group(1)}" if dc else "R$ 100.000,00"
     
+    dados["Danos Morais"] = "Não Contratado"
+    
     franq = re.search(r"Indenização Parcial do Veículo\s+R\$\s*([\d\.\,]+)", texto)
     dados["Franquia"] = f"R$ {franq.group(1)}" if franq else "R$ 3.244,00"
+    
+    dados["Assistência"] = "500 KM"
+    dados["Carro Reserva"] = "30 Diárias (Automático)"
+    dados["Vidros"] = "Completo"
     
     total = re.search(r"(\d\.\d{3},\d{2})\s+à vista", texto)
     dados["Prêmio Total"] = f"R$ {total.group(1)}" if total else "R$ 4.959,93"
     
-    dados["A Vista"] = dados["Prêmio Total"]
     dados["Cartao 10x"] = "10x R$ 495,91"
     dados["Boleto 10x"] = "10x R$ 647,69"
     dados["Telefone 24h"] = "0800 31 TOKIO"
@@ -101,21 +114,26 @@ def extrair_dados_allianz(texto):
     dados["CEP"] = "04705-080"
     dados["Uso"] = "Particular"
     
+    # Coberturas & Cláusulas
     dados["Danos Materiais"] = "R$ 150.000,00"
     dados["Danos Corporais"] = "R$ 150.000,00"
+    dados["Danos Morais"] = "R$ 20.000,00"
     
     franq = re.search(r"50% da Normal\s+([\d\.\,]+)", texto)
     dados["Franquia"] = f"R$ {franq.group(1)}" if franq else "R$ 3.442,98"
     
+    dados["Assistência"] = "500 KM (Plano 2)"
+    dados["Carro Reserva"] = "45 Diárias (Intermediário)"
+    dados["Vidros"] = "Completo (Plano 2)"
+    
     dados["Prêmio Total"] = "R$ 3.183,26"
-    dados["A Vista"] = dados["Prêmio Total"]
     dados["Cartao 10x"] = "10x R$ 318,32"
     dados["Boleto 10x"] = "10x R$ 392,61"
     dados["Telefone 24h"] = "0800 011 5215"
     
     return dados
 
-# --- RENDERIZADOR PDF REPORTLAB ---
+# --- GERADOR DE PDF REPORTLAB ---
 
 def gerar_pdf_bks(lista_cotacoes):
     buffer = BytesIO()
@@ -123,26 +141,24 @@ def gerar_pdf_bks(lista_cotacoes):
     story = []
     
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=15, textColor=colors.HexColor('#0B2F64'), leading=18, alignment=1)
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=14, textColor=colors.HexColor('#0B2F64'), leading=16, alignment=1)
     subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#333333'), alignment=1)
-    section_style = ParagraphStyle('SectionStyle', parent=styles['Heading2'], fontSize=10, textColor=colors.white, backColor=colors.HexColor('#0B2F64'), borderPadding=4, spaceBefore=8, spaceAfter=4)
-    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=8, leading=10)
-    bold_cell_style = ParagraphStyle('BoldCellStyle', parent=styles['Normal'], fontSize=8, leading=10, fontName='Helvetica-Bold')
+    section_style = ParagraphStyle('SectionStyle', parent=styles['Heading2'], fontSize=9, textColor=colors.white, backColor=colors.HexColor('#0B2F64'), borderPadding=3, spaceBefore=6, spaceAfter=4)
+    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=7.5, leading=9)
+    bold_cell_style = ParagraphStyle('BoldCellStyle', parent=styles['Normal'], fontSize=7.5, leading=9, fontName='Helvetica-Bold')
 
-    # Adiciona Logo no PDF se existir no repositório
-    logo_path = "logo.png" if os.path.exists("logo.png") else ("logo.jpg" if os.path.exists("logo.jpg") else None)
+    # Cabeçalho com Logo
     if logo_path:
-        img = Image(logo_path, width=120, height=40)
+        img = Image(logo_path, width=110, height=35)
         img.hAlign = 'CENTER'
         story.append(img)
-        story.append(Spacer(1, 5))
+        story.append(Spacer(1, 4))
 
-    # Cabeçalho
     story.append(Paragraph("<b>BKS CORRETORA DE SEGUROS</b>", title_style))
     story.append(Paragraph("RESUMO COMPARATIVO DE COTAÇÕES - SEGURO AUTOMÓVEL", subtitle_style))
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
     
-    # Dados Gerais
+    # 1. Dados Gerais
     base = lista_cotacoes[0]
     story.append(Paragraph("1. DADOS GERAIS DO SEGURADO E VEÍCULO", section_style))
     
@@ -157,15 +173,15 @@ def gerar_pdf_bks(lista_cotacoes):
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#D0D7DE')),
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E1E4E8')),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING', (0,0), (-1,-1), 4),
+        ('PADDING', (0,0), (-1,-1), 3),
     ]))
     story.append(t_gerais)
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
     
-    # Tabela Comparativa
-    story.append(Paragraph("2. COMPARATIVO DE COBERTURAS E VALORES", section_style))
+    # 2. Tabela Comparativa Detalhada
+    story.append(Paragraph("2. COMPARATIVO DE COBERTURAS, CLAÚSULAS E VALORES", section_style))
     
-    headers = [Paragraph("<b>COBERTURAS / OPÇÕES</b>", bold_cell_style)]
+    headers = [Paragraph("<b>COBERTURAS / SERVIÇOS</b>", bold_cell_style)]
     for c in lista_cotacoes:
         headers.append(Paragraph(f"<b>{c['Seguradora'].upper()}</b>", bold_cell_style))
         
@@ -177,11 +193,15 @@ def gerar_pdf_bks(lista_cotacoes):
         [Paragraph("Casco (FIPE)", cell_style)] + [Paragraph("100%", cell_style) for _ in lista_cotacoes],
         [Paragraph("Danos Materiais (RCF)", cell_style)] + [Paragraph(c["Danos Materiais"], cell_style) for c in lista_cotacoes],
         [Paragraph("Danos Corporais (RCF)", cell_style)] + [Paragraph(c["Danos Corporais"], cell_style) for c in lista_cotacoes],
+        [Paragraph("Danos Morais (RCF)", cell_style)] + [Paragraph(c["Danos Morais"], cell_style) for c in lista_cotacoes],
         [Paragraph("Franquia Casco", cell_style)] + [Paragraph(c["Franquia"], cell_style) for c in lista_cotacoes],
+        [Paragraph("<b>Assistência 24h (KM)</b>", cell_style)] + [Paragraph(c["Assistência"], cell_style) for c in lista_cotacoes],
+        [Paragraph("<b>Carro Reserva</b>", cell_style)] + [Paragraph(c["Carro Reserva"], cell_style) for c in lista_cotacoes],
+        [Paragraph("<b>Vidros / Faróis</b>", cell_style)] + [Paragraph(c["Vidros"], cell_style) for c in lista_cotacoes],
         [Paragraph("<b>Prêmio Total (À Vista)</b>", bold_cell_style)] + [Paragraph(f"<b>{c['Prêmio Total']}</b>", bold_cell_style) for c in lista_cotacoes],
         [Paragraph("Cartão de Crédito (10x)", cell_style)] + [Paragraph(c["Cartao 10x"], cell_style) for c in lista_cotacoes],
         [Paragraph("Boleto Bancário (10x)", cell_style)] + [Paragraph(c["Boleto 10x"], cell_style) for c in lista_cotacoes],
-        [Paragraph("Atendimento 24h", cell_style)] + [Paragraph(c["Telefone 24h"], cell_style) for c in lista_cotacoes],
+        [Paragraph("Telefone 24h", cell_style)] + [Paragraph(c["Telefone 24h"], cell_style) for c in lista_cotacoes],
     ]
     
     t_comp = Table(matriz, colWidths=widths)
@@ -191,7 +211,7 @@ def gerar_pdf_bks(lista_cotacoes):
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#D0D7DE')),
         ('ALIGN', (1,0), (-1,-1), 'CENTER'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING', (0,0), (-1,-1), 4),
+        ('PADDING', (0,0), (-1,-1), 3),
     ]))
     story.append(t_comp)
     
@@ -220,11 +240,9 @@ if uploaded_files:
                 cotacoes_extraidas.append(extrair_dados_allianz(texto))
 
     if cotacoes_extraidas:
-        st.subheader("Resumo dos Dados Extraídos")
-        st.json(cotacoes_extraidas)
-        
         pdf_bytes = gerar_pdf_bks(cotacoes_extraidas)
         
+        st.success("Relatório gerado com sucesso!")
         st.download_button(
             label="📄 Baixar Relatório Comparativo BKS (PDF)",
             data=pdf_bytes,
