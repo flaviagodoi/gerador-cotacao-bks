@@ -4,13 +4,12 @@ import re
 import os
 from io import BytesIO
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
 st.set_page_config(page_title="BKS Corretora", page_icon="🚗", layout="wide")
 
-# Visualização do Logo
 if os.path.exists("logo.png"):
     st.image("logo.png", width=220)
 elif os.path.exists("logo.jpg"):
@@ -19,7 +18,7 @@ elif os.path.exists("logo.jpg"):
 st.title("Gerador de Relatório Comparativo - BKS Corretora")
 st.write("Insira as cotações da Porto, Tokio Marine ou Allianz para compilar o comparativo BKS.")
 
-# --- FUNÇÕES AJUSTADAS DE EXTRAÇÃO ---
+# --- FUNÇÕES DE EXTRAÇÃO ---
 
 def extrair_dados_porto(texto):
     dados = {"Seguradora": "Porto Seguro"}
@@ -27,7 +26,7 @@ def extrair_dados_porto(texto):
     seg = re.search(r"Segurado\(a\)\s+Nascimento\s+CPF\s*\n([^\n0-9]+)", texto)
     dados["Segurado"] = seg.group(1).strip() if seg else "N/A"
     
-    veic = re.search(r"\d{4}\s*-\s*[^\n]+HB20[^\n]+|HB20[^\n]+", texto)
+    veic = re.search(r"HB20 PREMIUM[^\n]+", texto)
     dados["Veiculo"] = veic.group(0).strip() if veic else "HB20 PREMIUM 1.6 16V FLEX AUT."
     
     dados["Placa"] = "A/A (Novo/Isento)"
@@ -120,20 +119,28 @@ def extrair_dados_allianz(texto):
 
 def gerar_pdf_bks(lista_cotacoes):
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=20, bottomMargin=20)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=15, bottomMargin=15)
     story = []
     
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=16, textColor=colors.HexColor('#0B2F64'), leading=20, alignment=1)
-    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#333333'), alignment=1)
-    section_style = ParagraphStyle('SectionStyle', parent=styles['Heading2'], fontSize=11, textColor=colors.white, backColor=colors.HexColor('#0B2F64'), borderPadding=4, spaceBefore=10, spaceAfter=5)
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=15, textColor=colors.HexColor('#0B2F64'), leading=18, alignment=1)
+    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#333333'), alignment=1)
+    section_style = ParagraphStyle('SectionStyle', parent=styles['Heading2'], fontSize=10, textColor=colors.white, backColor=colors.HexColor('#0B2F64'), borderPadding=4, spaceBefore=8, spaceAfter=4)
     cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=8, leading=10)
     bold_cell_style = ParagraphStyle('BoldCellStyle', parent=styles['Normal'], fontSize=8, leading=10, fontName='Helvetica-Bold')
+
+    # Adiciona Logo no PDF se existir no repositório
+    logo_path = "logo.png" if os.path.exists("logo.png") else ("logo.jpg" if os.path.exists("logo.jpg") else None)
+    if logo_path:
+        img = Image(logo_path, width=120, height=40)
+        img.hAlign = 'CENTER'
+        story.append(img)
+        story.append(Spacer(1, 5))
 
     # Cabeçalho
     story.append(Paragraph("<b>BKS CORRETORA DE SEGUROS</b>", title_style))
     story.append(Paragraph("RESUMO COMPARATIVO DE COTAÇÕES - SEGURO AUTOMÓVEL", subtitle_style))
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
     
     # Dados Gerais
     base = lista_cotacoes[0]
@@ -150,10 +157,10 @@ def gerar_pdf_bks(lista_cotacoes):
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#D0D7DE')),
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E1E4E8')),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING', (0,0), (-1,-1), 5),
+        ('PADDING', (0,0), (-1,-1), 4),
     ]))
     story.append(t_gerais)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
     
     # Tabela Comparativa
     story.append(Paragraph("2. COMPARATIVO DE COBERTURAS E VALORES", section_style))
@@ -184,7 +191,7 @@ def gerar_pdf_bks(lista_cotacoes):
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#D0D7DE')),
         ('ALIGN', (1,0), (-1,-1), 'CENTER'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING', (0,0), (-1,-1), 5),
+        ('PADDING', (0,0), (-1,-1), 4),
     ]))
     story.append(t_comp)
     
