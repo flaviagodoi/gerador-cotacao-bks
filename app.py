@@ -28,10 +28,14 @@ def extrair_dados_porto(texto):
     dados = {"Seguradora": "Porto Seguro"}
     
     seg = re.search(r"Segurado\(a\)\s+Nascimento\s+CPF\s*\n([^\n0-9]+)", texto)
-    dados["Segurado"] = seg.group(1).strip() if seg else "N/A"
+    nome_seg = seg.group(1).strip() if seg else "N/A"
+    nome_seg = re.sub(r"\bCPF\b", "", nome_seg).strip()
+    dados["Segurado"] = nome_seg
     
     cond = re.search(r"Questionário de avaliação de risco[^\n]*\nCondutor[^\n]*\n([^\n0-9]+)", texto)
-    dados["Condutor"] = cond.group(1).strip() if cond else dados["Segurado"]
+    nome_cond = cond.group(1).strip() if cond else dados["Segurado"]
+    nome_cond = re.sub(r"\bCPF\b", "", nome_cond).strip()
+    dados["Condutor"] = nome_cond
     
     veic = re.search(r"HB20 PREMIUM[^\n]+", texto)
     dados["Veiculo"] = veic.group(0).strip() if veic else "HB20 PREMIUM 1.6 16V FLEX AUT."
@@ -47,6 +51,7 @@ def extrair_dados_porto(texto):
     dados["Combustivel"] = "GASOLINA/ALCOOL"
     dados["FIPE"] = "150924"
     dados["Blindado"] = "Não"
+    dados["Kit_Gas"] = "Não"
     
     dm = re.search(r"RCF-V Danos Materiais\s+R\$\s*([\d\.\,]+)", texto)
     dados["Danos Materiais"] = f"R$ {dm.group(1)}" if dm else "R$ 100.000,00"
@@ -55,18 +60,20 @@ def extrair_dados_porto(texto):
     dados["Danos Corporais"] = f"R$ {dc.group(1)}" if dc else "R$ 100.000,00"
     dados["Danos Morais"] = "Não Contratado"
     
+    # Franquias
     franq = re.search(r"Compreensiva[^\n]*?R\$\s*([\d\.\,]+)\s*\(", texto)
-    dados["Franquia"] = f"R$ {franq.group(1)}" if franq else "R$ 3.490,00"
+    dados["Franquia_Casco"] = f"R$ {franq.group(1)}" if franq else "R$ 3.490,00"
+    dados["Franquia_Vidros"] = "Diferenciada" if "Vidros" in texto or "76 -" in texto else "Não Contratado"
     
+    # Serviços
     dados["Assistência"] = "Km Ilimitado"
     dados["Carro Reserva"] = "Não Contratado"
-    dados["Vidros"] = "Completo"
+    dados["Vidros"] = "Completo" if dados["Franquia_Vidros"] != "Não Contratado" else "Não Contratado"
     
-    total = re.search(r"Valor total\s+R\$\s*([\d\.\,]+)", texto)
-    dados["Prêmio Total"] = f"R$ {total.group(1)}" if total else "R$ 5.227,98"
-    
-    dados["Cartao 10x"] = "10x R$ 522,80"
-    dados["Boleto 10x"] = "10x R$ 601,36"
+    # Pagamentos
+    dados["Pag_Cartao"] = "À vista: R$ 4.966,54<br/>4x R$ 1.306,99 | 6x R$ 871,33<br/>10x R$ 522,80 | 12x R$ 435,66"
+    dados["Pag_Boleto"] = "À vista: R$ 5.227,98<br/>4x R$ 1.405,54 | 6x R$ 982,60<br/>10x R$ 646,70 | 12x R$ 563,75"
+    dados["Pag_Debito"] = "À vista: R$ 4.966,54<br/>4x R$ 1.306,99 | 6x R$ 928,58<br/>10x R$ 611,41 | 12x R$ 526,89"
     dados["Telefone 24h"] = "0800 727 2766"
     
     return dados
@@ -75,10 +82,14 @@ def extrair_dados_tokio(texto):
     dados = {"Seguradora": "Tokio Marine"}
     
     seg = re.search(r"Proponente[^\n]*\n([A-Z\s]+)\s+\d", texto)
-    dados["Segurado"] = seg.group(1).strip() if seg else "N/A"
+    nome_seg = seg.group(1).strip() if seg else "N/A"
+    nome_seg = re.sub(r"\bCPF\b", "", nome_seg).strip()
+    dados["Segurado"] = nome_seg
     
     cond = re.search(r"Principal Condutor[^\n]*\n[^\n]+\s+([A-Z\s]+)", texto)
-    dados["Condutor"] = cond.group(1).strip() if cond and "Próprio" not in cond.group(1) else dados["Segurado"]
+    nome_cond = cond.group(1).strip() if cond and "Próprio" not in cond.group(1) else dados["Segurado"]
+    nome_cond = re.sub(r"\bCPF\b", "", nome_cond).strip()
+    dados["Condutor"] = nome_cond
     
     veic = re.search(r"HYUNDAI[^\n]+", texto)
     dados["Veiculo"] = veic.group(0).strip() if veic else "HYUNDAI HB20 HATCH PREMIUM 1.6"
@@ -94,6 +105,7 @@ def extrair_dados_tokio(texto):
     dados["Combustivel"] = "Flex"
     dados["FIPE"] = "015092-4"
     dados["Blindado"] = "Não"
+    dados["Kit_Gas"] = "Não"
     
     dm = re.search(r"RCF-V - Danos Materiais\s+R\$\s*([\d\.\,]+)", texto)
     dados["Danos Materiais"] = f"R$ {dm.group(1)}" if dm else "R$ 100.000,00"
@@ -102,18 +114,20 @@ def extrair_dados_tokio(texto):
     dados["Danos Corporais"] = f"R$ {dc.group(1)}" if dc else "R$ 100.000,00"
     dados["Danos Morais"] = "Não Contratado"
     
+    # Franquias
     franq = re.search(r"Indenização Parcial do Veículo\s+R\$\s*([\d\.\,]+)", texto)
-    dados["Franquia"] = f"R$ {franq.group(1)}" if franq else "R$ 3.244,00"
+    dados["Franquia_Casco"] = f"R$ {franq.group(1)}" if franq else "R$ 3.244,00"
+    dados["Franquia_Vidros"] = "Diferenciada" if "Vidros" in texto else "Não Contratado"
     
+    # Serviços
     dados["Assistência"] = "500 KM"
     dados["Carro Reserva"] = "30 Diárias (Automático)"
-    dados["Vidros"] = "Completo"
+    dados["Vidros"] = "Completo" if dados["Franquia_Vidros"] != "Não Contratado" else "Não Contratado"
     
-    total = re.search(r"(\d\.\d{3},\d{2})\s+à vista", texto)
-    dados["Prêmio Total"] = f"R$ {total.group(1)}" if total else "R$ 4.959,93"
-    
-    dados["Cartao 10x"] = "10x R$ 495,91"
-    dados["Boleto 10x"] = "10x R$ 647,69"
+    # Pagamentos
+    dados["Pag_Cartao"] = "À vista: R$ 4.959,93<br/>4x R$ 1.239,91 | 6x R$ 826,57<br/>10x R$ 495,91 | 12x R$ 413,25"
+    dados["Pag_Boleto"] = "À vista: R$ 4.959,93<br/>4x R$ 1.239,91 | 6x R$ 919,99<br/>10x R$ 647,69 | 12x N/A"
+    dados["Pag_Debito"] = "À vista: R$ 4.959,93<br/>4x R$ 1.239,91 | 6x R$ 857,99<br/>10x R$ 587,66 | 12x R$ 507,89"
     dados["Telefone 24h"] = "0800 31 TOKIO"
     
     return dados
@@ -122,10 +136,14 @@ def extrair_dados_allianz(texto):
     dados = {"Seguradora": "Allianz"}
     
     seg = re.search(r"Olá\s+([A-Z\s]+),", texto)
-    dados["Segurado"] = seg.group(1).strip() if seg else "N/A"
+    nome_seg = seg.group(1).strip() if seg else "N/A"
+    nome_seg = re.sub(r"\bCPF\b", "", nome_seg).strip()
+    dados["Segurado"] = nome_seg
     
     cond = re.search(r"INFORMAÇÕES DO CONDUTOR PRINCIPAL[^\n]*\nNome:\s*([A-Z\s]+)", texto)
-    dados["Condutor"] = cond.group(1).strip() if cond else dados["Segurado"]
+    nome_cond = cond.group(1).strip() if cond else dados["Segurado"]
+    nome_cond = re.sub(r"\bCPF\b", "", nome_cond).strip()
+    dados["Condutor"] = nome_cond
     
     veic = re.search(r"HYUNDAI[^\n]+", texto)
     dados["Veiculo"] = veic.group(0).strip() if veic else "HYUNDAI HB20 PREMIUM 1.6"
@@ -139,21 +157,26 @@ def extrair_dados_allianz(texto):
     dados["Combustivel"] = "Flex"
     dados["FIPE"] = "015092-4"
     dados["Blindado"] = "Não"
+    dados["Kit_Gas"] = "Não"
     
     dados["Danos Materiais"] = "R$ 150.000,00"
     dados["Danos Corporais"] = "R$ 150.000,00"
     dados["Danos Morais"] = "R$ 20.000,00"
     
+    # Franquias
     franq = re.search(r"50% da Normal\s+([\d\.\,]+)", texto)
-    dados["Franquia"] = f"R$ {franq.group(1)}" if franq else "R$ 3.442,98"
+    dados["Franquia_Casco"] = f"R$ {franq.group(1)}" if franq else "R$ 3.442,98"
+    dados["Franquia_Vidros"] = "Diferenciada" if "Vidros" in texto or "Parabrisa" in texto else "Não Contratado"
     
+    # Serviços
     dados["Assistência"] = "500 KM (Plano 2)"
     dados["Carro Reserva"] = "45 Diárias"
-    dados["Vidros"] = "Completo"
+    dados["Vidros"] = "Completo" if dados["Franquia_Vidros"] != "Não Contratado" else "Não Contratado"
     
-    dados["Prêmio Total"] = "R$ 3.183,26"
-    dados["Cartao 10x"] = "10x R$ 318,32"
-    dados["Boleto 10x"] = "10x R$ 392,61"
+    # Pagamentos
+    dados["Pag_Cartao"] = "À vista: R$ 3.183,26<br/>4x R$ 795,81 | 6x R$ 530,54<br/>10x R$ 318,32 | 12x N/A"
+    dados["Pag_Boleto"] = "À vista: R$ 3.183,26<br/>4x R$ 854,96 | 6x R$ 597,29<br/>10x R$ 392,61 | 12x N/A"
+    dados["Pag_Debito"] = "À vista: R$ 3.183,26<br/>4x R$ 795,81 | 6x R$ 530,54<br/>10x R$ 361,55 | 12x N/A"
     dados["Telefone 24h"] = "0800 011 5215"
     
     return dados
@@ -169,8 +192,8 @@ def gerar_pdf_bks(lista_cotacoes):
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=13, textColor=colors.HexColor('#0B2F64'), leading=15, alignment=1)
     subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#333333'), alignment=1)
     section_style = ParagraphStyle('SectionStyle', parent=styles['Heading2'], fontSize=8.5, textColor=colors.white, backColor=colors.HexColor('#0B2F64'), borderPadding=3, spaceBefore=5, spaceAfter=3)
-    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=7, leading=8.5)
-    bold_cell_style = ParagraphStyle('BoldCellStyle', parent=styles['Normal'], fontSize=7, leading=8.5, fontName='Helvetica-Bold')
+    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=6.5, leading=8)
+    bold_cell_style = ParagraphStyle('BoldCellStyle', parent=styles['Normal'], fontSize=6.5, leading=8, fontName='Helvetica-Bold')
 
     if logo_filename:
         img = Image(logo_filename, width=110, height=35)
@@ -193,7 +216,7 @@ def gerar_pdf_bks(lista_cotacoes):
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#D0D7DE')),
         ('ALIGN', (1,0), (-1,-1), 'CENTER'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING', (0,0), (-1,-1), 2.5),
+        ('PADDING', (0,0), (-1,-1), 2),
     ])
 
     # 1. PERFIL
@@ -209,7 +232,7 @@ def gerar_pdf_bks(lista_cotacoes):
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#D0D7DE')),
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E1E4E8')),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING', (0,0), (-1,-1), 2.5),
+        ('PADDING', (0,0), (-1,-1), 2),
     ]))
     story.append(t_perfil)
     story.append(Spacer(1, 3))
@@ -219,7 +242,8 @@ def gerar_pdf_bks(lista_cotacoes):
     dados_veic_table = [
         [Paragraph(f"<b>Veículo:</b> {base.get('Veiculo')}", cell_style), Paragraph(f"<b>Ano/Modelo:</b> {base.get('Ano_Modelo')}", cell_style)],
         [Paragraph(f"<b>Placa:</b> {base.get('Placa')}", cell_style), Paragraph(f"<b>Combustível:</b> {base.get('Combustivel')}", cell_style)],
-        [Paragraph(f"<b>Código FIPE:</b> {base.get('FIPE')}", cell_style), Paragraph(f"<b>Blindagem:</b> {base.get('Blindado')}", cell_style)]
+        [Paragraph(f"<b>Código FIPE:</b> {base.get('FIPE')}", cell_style), Paragraph(f"<b>Kit Gás:</b> {base.get('Kit_Gas')}", cell_style)],
+        [Paragraph(f"<b>Blindagem:</b> {base.get('Blindado')}", cell_style), Paragraph("", cell_style)]
     ]
     t_veic = Table(dados_veic_table, colWidths=[280, 275])
     t_veic.setStyle(TableStyle([
@@ -227,7 +251,7 @@ def gerar_pdf_bks(lista_cotacoes):
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#D0D7DE')),
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E1E4E8')),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING', (0,0), (-1,-1), 2.5),
+        ('PADDING', (0,0), (-1,-1), 2),
     ]))
     story.append(t_veic)
     story.append(Spacer(1, 3))
@@ -246,28 +270,39 @@ def gerar_pdf_bks(lista_cotacoes):
     story.append(t_cob)
     story.append(Spacer(1, 3))
 
-    # 4. CLÁUSULAS E SERVIÇOS ADICIONAIS
-    story.append(Paragraph("4. CLÁUSULAS E SERVIÇOS ADICIONAIS", section_style))
+    # 4. FRANQUIAS
+    story.append(Paragraph("4. FRANQUIAS DA APÓLICE", section_style))
+    matriz_franq = [
+        headers,
+        [Paragraph("Franquia Casco (Veículo)", cell_style)] + [Paragraph(c["Franquia_Casco"], cell_style) for c in lista_cotacoes],
+        [Paragraph("Franquia Vidros / Retrovisores / Faróis", cell_style)] + [Paragraph(c["Franquia_Vidros"], cell_style) for c in lista_cotacoes],
+    ]
+    t_franq = Table(matriz_franq, colWidths=widths)
+    t_franq.setStyle(t_style)
+    story.append(t_franq)
+    story.append(Spacer(1, 3))
+
+    # 5. CLÁUSULAS E SERVIÇOS ADICIONAIS
+    story.append(Paragraph("5. CLAÚSULAS E SERVIÇOS ADICIONAIS", section_style))
     matriz_serv = [
         headers,
-        [Paragraph("Franquia Casco", cell_style)] + [Paragraph(c["Franquia"], cell_style) for c in lista_cotacoes],
         [Paragraph("Assistência 24h (KM)", cell_style)] + [Paragraph(c["Assistência"], cell_style) for c in lista_cotacoes],
         [Paragraph("Carro Reserva", cell_style)] + [Paragraph(c["Carro Reserva"], cell_style) for c in lista_cotacoes],
-        [Paragraph("Vidros / Faróis", cell_style)] + [Paragraph(c["Vidros"], cell_style) for c in lista_cotacoes],
+        [Paragraph("Vidros / Faróis / Lanternas", cell_style)] + [Paragraph(c["Vidros"], cell_style) for c in lista_cotacoes],
     ]
     t_serv = Table(matriz_serv, colWidths=widths)
     t_serv.setStyle(t_style)
     story.append(t_serv)
     story.append(Spacer(1, 3))
 
-    # 5. PREÇOS E OPÇÕES DE PAGAMENTO
-    story.append(Paragraph("5. PREÇOS E OPÇÕES DE PAGAMENTO", section_style))
+    # 6. PREÇOS E OPÇÕES DE PAGAMENTO
+    story.append(Paragraph("6. PREÇOS E OPÇÕES DE PAGAMENTO", section_style))
     matriz_pag = [
         headers,
-        [Paragraph("<b>Prêmio Total (À Vista)</b>", bold_cell_style)] + [Paragraph(f"<b>{c['Prêmio Total']}</b>", bold_cell_style) for c in lista_cotacoes],
-        [Paragraph("Cartão de Crédito (10x)", cell_style)] + [Paragraph(c["Cartao 10x"], cell_style) for c in lista_cotacoes],
-        [Paragraph("Boleto Bancário (10x)", cell_style)] + [Paragraph(c["Boleto 10x"], cell_style) for c in lista_cotacoes],
-        [Paragraph("Telefone 24h", cell_style)] + [Paragraph(c["Telefone 24h"], cell_style) for c in lista_cotacoes],
+        [Paragraph("<b>Cartão de Crédito</b><br/>(À Vista, 4x, 6x, 10x, 12x)", cell_style)] + [Paragraph(c["Pag_Cartao"], cell_style) for c in lista_cotacoes],
+        [Paragraph("<b>Boleto Bancário</b><br/>(À Vista, 4x, 6x, 10x, 12x)", cell_style)] + [Paragraph(c["Pag_Boleto"], cell_style) for c in lista_cotacoes],
+        [Paragraph("<b>Débito em Conta</b><br/>(À Vista, 4x, 6x, 10x, 12x)", cell_style)] + [Paragraph(c["Pag_Debito"], cell_style) for c in lista_cotacoes],
+        [Paragraph("Telefone 24h Seguradora", cell_style)] + [Paragraph(c["Telefone 24h"], cell_style) for c in lista_cotacoes],
     ]
     t_pag = Table(matriz_pag, colWidths=widths)
     t_pag.setStyle(t_style)
