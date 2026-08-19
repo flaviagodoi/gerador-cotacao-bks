@@ -37,9 +37,12 @@ def extrair_dados_porto(texto):
     nome_cond = re.sub(r"\bCPF\b", "", nome_cond).strip()
     dados["Condutor"] = nome_cond
     
-    veic = re.search(r"HB20 PREMIUM[^\n]+", texto)
-    dados["Veiculo"] = veic.group(0).strip() if veic else "HB20 PREMIUM 1.6 16V FLEX AUT."
+    tipo_seg = re.search(r"Tipo de Operação[^\n]*\n([^\n]+)", texto)
+    dados["Tipo_Seguro"] = "Seguro Novo" if tipo_seg and "novo" in tipo_seg.group(1).lower() else "Renovação"
+    dados["Bonus"] = "0" if dados["Tipo_Seguro"] == "Seguro Novo" else "N/A"
     
+    dados["FIPE"] = "150924"
+    dados["Veiculo"] = f"HB20 PREMIUM 1.6 16V FLEX AUT. 2016/2017 (FIPE: {dados['FIPE']})"
     dados["Placa"] = "A/A (Novo/Isento)"
     
     uso = re.search(r"Tipo de uso\s+CEP de pernoite[^\n]*\n([A-Za-z]+)\s+([\d\-]+)", texto)
@@ -47,9 +50,7 @@ def extrair_dados_porto(texto):
     dados["CEP"] = uso.group(2).strip() if uso else "04705-080"
     
     dados["Condutor_Jovem"] = "Não"
-    dados["Ano_Modelo"] = "2016 / 2017"
     dados["Combustivel"] = "GASOLINA/ALCOOL"
-    dados["FIPE"] = "150924"
     dados["Blindado"] = "Não"
     dados["Kit_Gas"] = "Não"
     
@@ -91,9 +92,12 @@ def extrair_dados_tokio(texto):
     nome_cond = re.sub(r"\bCPF\b", "", nome_cond).strip()
     dados["Condutor"] = nome_cond
     
-    veic = re.search(r"HYUNDAI[^\n]+", texto)
-    dados["Veiculo"] = veic.group(0).strip() if veic else "HYUNDAI HB20 HATCH PREMIUM 1.6"
+    tipo_seg = re.search(r"Tipo Seguro[^\n]*\n([^\n]+)", texto)
+    dados["Tipo_Seguro"] = "Seguro Novo" if tipo_seg and "novo" in tipo_seg.group(1).lower() else "Renovação"
+    dados["Bonus"] = "0" if dados["Tipo_Seguro"] == "Seguro Novo" else "N/A"
     
+    dados["FIPE"] = "015092-4"
+    dados["Veiculo"] = f"HYUNDAI HB20 HATCH PREMIUM 1.6 2017/2017 (FIPE: {dados['FIPE']})"
     dados["Placa"] = "A/A (Novo)"
     dados["Uso"] = "Particular"
     
@@ -101,9 +105,7 @@ def extrair_dados_tokio(texto):
     dados["CEP"] = cep.group(1).strip() if cep else "04705-080"
     
     dados["Condutor_Jovem"] = "Não"
-    dados["Ano_Modelo"] = "2017 / 2017"
     dados["Combustivel"] = "Flex"
-    dados["FIPE"] = "015092-4"
     dados["Blindado"] = "Não"
     dados["Kit_Gas"] = "Não"
     
@@ -145,17 +147,20 @@ def extrair_dados_allianz(texto):
     nome_cond = re.sub(r"\bCPF\b", "", nome_cond).strip()
     dados["Condutor"] = nome_cond
     
-    veic = re.search(r"HYUNDAI[^\n]+", texto)
-    dados["Veiculo"] = veic.group(0).strip() if veic else "HYUNDAI HB20 PREMIUM 1.6"
+    tipo_seg = re.search(r"Tipo de Seguro:\s*([^\n]+)", texto)
+    dados["Tipo_Seguro"] = "Seguro Novo" if tipo_seg and "novo" in tipo_seg.group(1).lower() else "Renovação"
     
+    bonus = re.search(r"Classe Bônus:\s*([\d]+)", texto)
+    dados["Bonus"] = bonus.group(1).strip() if bonus else "0"
+    
+    dados["FIPE"] = "015092-4"
+    dados["Veiculo"] = f"HYUNDAI HB20 PREMIUM 1.6 2019/2019 (FIPE: {dados['FIPE']})"
     dados["Placa"] = "A/A (Novo)"
     dados["CEP"] = "04705-080"
     dados["Uso"] = "Particular"
     
     dados["Condutor_Jovem"] = "Não"
-    dados["Ano_Modelo"] = "2019 / 2019"
     dados["Combustivel"] = "Flex"
-    dados["FIPE"] = "015092-4"
     dados["Blindado"] = "Não"
     dados["Kit_Gas"] = "Não"
     
@@ -220,7 +225,6 @@ def gerar_pdf_bks(lista_cotacoes):
         ('PADDING', (0,0), (-1,-1), 2),
     ])
 
-    # Estilo com espaçamento maior para a tabela de Preços
     t_pag_style = TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#E6EEF8')),
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#0B2F64')),
@@ -233,8 +237,9 @@ def gerar_pdf_bks(lista_cotacoes):
     # 1. PERFIL
     story.append(Paragraph("1. DADOS DO SEGURADO E PERFIL", section_style))
     dados_perfil_table = [
-        [Paragraph(f"<b>Segurado:</b> {base.get('Segurado')}", cell_style), Paragraph(f"<b>CEP de Pernoite:</b> {base.get('CEP')}", cell_style)],
-        [Paragraph(f"<b>Principal Condutor:</b> {base.get('Condutor')}", cell_style), Paragraph(f"<b>Utilização do Veículo:</b> {base.get('Uso')}", cell_style)],
+        [Paragraph(f"<b>Segurado:</b> {base.get('Segurado')}", cell_style), Paragraph(f"<b>Tipo de Seguro:</b> {base.get('Tipo_Seguro')}", cell_style)],
+        [Paragraph(f"<b>Principal Condutor:</b> {base.get('Condutor')}", cell_style), Paragraph(f"<b>Classe de Bônus:</b> {base.get('Bonus')}", cell_style)],
+        [Paragraph(f"<b>CEP de Pernoite:</b> {base.get('CEP')}", cell_style), Paragraph(f"<b>Utilização do Veículo:</b> {base.get('Uso')}", cell_style)],
         [Paragraph(f"<b>Condutores entre 18 e 25 anos:</b> {base.get('Condutor_Jovem')}", cell_style), Paragraph("", cell_style)]
     ]
     t_perfil = Table(dados_perfil_table, colWidths=[280, 275])
@@ -251,10 +256,8 @@ def gerar_pdf_bks(lista_cotacoes):
     # 2. VEÍCULO
     story.append(Paragraph("2. DADOS DO VEÍCULO", section_style))
     dados_veic_table = [
-        [Paragraph(f"<b>Veículo:</b> {base.get('Veiculo')}", cell_style), Paragraph(f"<b>Ano/Modelo:</b> {base.get('Ano_Modelo')}", cell_style)],
-        [Paragraph(f"<b>Placa:</b> {base.get('Placa')}", cell_style), Paragraph(f"<b>Combustível:</b> {base.get('Combustivel')}", cell_style)],
-        [Paragraph(f"<b>Código FIPE:</b> {base.get('FIPE')}", cell_style), Paragraph(f"<b>Kit Gás:</b> {base.get('Kit_Gas')}", cell_style)],
-        [Paragraph(f"<b>Blindagem:</b> {base.get('Blindado')}", cell_style), Paragraph("", cell_style)]
+        [Paragraph(f"<b>Veículo:</b> {base.get('Veiculo')}", cell_style), Paragraph(f"<b>Placa:</b> {base.get('Placa')}", cell_style)],
+        [Paragraph(f"<b>Combustível:</b> {base.get('Combustivel')}", cell_style), Paragraph(f"<b>Kit Gás:</b> {base.get('Kit_Gas')} | <b>Blindagem:</b> {base.get('Blindado')}", cell_style)]
     ]
     t_veic = Table(dados_veic_table, colWidths=[280, 275])
     t_veic.setStyle(TableStyle([
