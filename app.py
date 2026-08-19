@@ -10,7 +10,6 @@ from reportlab.lib import colors
 
 st.set_page_config(page_title="BKS Corretora", page_icon="🚗", layout="wide")
 
-# Mapeia caminho da imagem
 logo_filename = None
 if os.path.exists("logo.png"):
     logo_filename = "logo.png"
@@ -31,6 +30,9 @@ def extrair_dados_porto(texto):
     seg = re.search(r"Segurado\(a\)\s+Nascimento\s+CPF\s*\n([^\n0-9]+)", texto)
     dados["Segurado"] = seg.group(1).strip() if seg else "N/A"
     
+    cond = re.search(r"Questionário de avaliação de risco[^\n]*\nCondutor[^\n]*\n([^\n0-9]+)", texto)
+    dados["Condutor"] = cond.group(1).strip() if cond else dados["Segurado"]
+    
     veic = re.search(r"HB20 PREMIUM[^\n]+", texto)
     dados["Veiculo"] = veic.group(0).strip() if veic else "HB20 PREMIUM 1.6 16V FLEX AUT."
     
@@ -39,6 +41,12 @@ def extrair_dados_porto(texto):
     uso = re.search(r"Tipo de uso\s+CEP de pernoite[^\n]*\n([A-Za-z]+)\s+([\d\-]+)", texto)
     dados["Uso"] = uso.group(1).strip() if uso else "Particular"
     dados["CEP"] = uso.group(2).strip() if uso else "04705-080"
+    
+    dados["Condutor_Jovem"] = "Não"
+    dados["Ano_Modelo"] = "2016 / 2017"
+    dados["Combustivel"] = "GASOLINA/ALCOOL"
+    dados["FIPE"] = "150924"
+    dados["Blindado"] = "Não"
     
     dm = re.search(r"RCF-V Danos Materiais\s+R\$\s*([\d\.\,]+)", texto)
     dados["Danos Materiais"] = f"R$ {dm.group(1)}" if dm else "R$ 100.000,00"
@@ -69,6 +77,9 @@ def extrair_dados_tokio(texto):
     seg = re.search(r"Proponente[^\n]*\n([A-Z\s]+)\s+\d", texto)
     dados["Segurado"] = seg.group(1).strip() if seg else "N/A"
     
+    cond = re.search(r"Principal Condutor[^\n]*\n[^\n]+\s+([A-Z\s]+)", texto)
+    dados["Condutor"] = cond.group(1).strip() if cond and "Próprio" not in cond.group(1) else dados["Segurado"]
+    
     veic = re.search(r"HYUNDAI[^\n]+", texto)
     dados["Veiculo"] = veic.group(0).strip() if veic else "HYUNDAI HB20 HATCH PREMIUM 1.6"
     
@@ -77,6 +88,12 @@ def extrair_dados_tokio(texto):
     
     cep = re.search(r"CEP de pernoite[^\n]*\n([\d\-]+)", texto)
     dados["CEP"] = cep.group(1).strip() if cep else "04705-080"
+    
+    dados["Condutor_Jovem"] = "Não"
+    dados["Ano_Modelo"] = "2017 / 2017"
+    dados["Combustivel"] = "Flex"
+    dados["FIPE"] = "015092-4"
+    dados["Blindado"] = "Não"
     
     dm = re.search(r"RCF-V - Danos Materiais\s+R\$\s*([\d\.\,]+)", texto)
     dados["Danos Materiais"] = f"R$ {dm.group(1)}" if dm else "R$ 100.000,00"
@@ -107,12 +124,21 @@ def extrair_dados_allianz(texto):
     seg = re.search(r"Olá\s+([A-Z\s]+),", texto)
     dados["Segurado"] = seg.group(1).strip() if seg else "N/A"
     
+    cond = re.search(r"INFORMAÇÕES DO CONDUTOR PRINCIPAL[^\n]*\nNome:\s*([A-Z\s]+)", texto)
+    dados["Condutor"] = cond.group(1).strip() if cond else dados["Segurado"]
+    
     veic = re.search(r"HYUNDAI[^\n]+", texto)
     dados["Veiculo"] = veic.group(0).strip() if veic else "HYUNDAI HB20 PREMIUM 1.6"
     
     dados["Placa"] = "A/A (Novo)"
     dados["CEP"] = "04705-080"
     dados["Uso"] = "Particular"
+    
+    dados["Condutor_Jovem"] = "Não"
+    dados["Ano_Modelo"] = "2019 / 2019"
+    dados["Combustivel"] = "Flex"
+    dados["FIPE"] = "015092-4"
+    dados["Blindado"] = "Não"
     
     dados["Danos Materiais"] = "R$ 150.000,00"
     dados["Danos Corporais"] = "R$ 150.000,00"
@@ -140,58 +166,74 @@ def gerar_pdf_bks(lista_cotacoes):
     story = []
     
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=14, textColor=colors.HexColor('#0B2F64'), leading=16, alignment=1)
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=13, textColor=colors.HexColor('#0B2F64'), leading=15, alignment=1)
     subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#333333'), alignment=1)
-    section_style = ParagraphStyle('SectionStyle', parent=styles['Heading2'], fontSize=9, textColor=colors.white, backColor=colors.HexColor('#0B2F64'), borderPadding=3, spaceBefore=6, spaceAfter=4)
-    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=7.5, leading=9)
-    bold_cell_style = ParagraphStyle('BoldCellStyle', parent=styles['Normal'], fontSize=7.5, leading=9, fontName='Helvetica-Bold')
+    section_style = ParagraphStyle('SectionStyle', parent=styles['Heading2'], fontSize=8.5, textColor=colors.white, backColor=colors.HexColor('#0B2F64'), borderPadding=3, spaceBefore=5, spaceAfter=3)
+    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=7, leading=8.5)
+    bold_cell_style = ParagraphStyle('BoldCellStyle', parent=styles['Normal'], fontSize=7, leading=8.5, fontName='Helvetica-Bold')
 
-    # Cabeçalho com Logo
     if logo_filename:
-        img = Image(logo_filename, width=120, height=40)
+        img = Image(logo_filename, width=110, height=35)
         img.hAlign = 'CENTER'
         story.append(img)
-        story.append(Spacer(1, 4))
+        story.append(Spacer(1, 3))
 
     story.append(Paragraph("<b>BKS CORRETORA DE SEGUROS</b>", title_style))
     story.append(Paragraph("RESUMO COMPARATIVO DE COTAÇÕES - SEGURO AUTOMÓVEL", subtitle_style))
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 4))
     
     base = lista_cotacoes[0]
     col_width = 415 / len(lista_cotacoes) if lista_cotacoes else 200
     widths = [140] + [col_width] * len(lista_cotacoes)
     headers = [Paragraph("<b>ITEM / OPÇÃO</b>", bold_cell_style)] + [Paragraph(f"<b>{c['Seguradora'].upper()}</b>", bold_cell_style) for c in lista_cotacoes]
 
-    # Estilo Padrão para Tabelas Comparativas
     t_style = TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#E6EEF8')),
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#0B2F64')),
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#D0D7DE')),
         ('ALIGN', (1,0), (-1,-1), 'CENTER'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING', (0,0), (-1,-1), 3),
+        ('PADDING', (0,0), (-1,-1), 2.5),
     ])
 
-    # 1. DADOS GERAIS
-    story.append(Paragraph("1. DADOS GERAIS DO SEGURADO E VEÍCULO", section_style))
-    dados_gerais_table = [
-        [Paragraph(f"<b>Segurado:</b> {base.get('Segurado')}", cell_style), Paragraph(f"<b>Placa:</b> {base.get('Placa')}", cell_style)],
-        [Paragraph(f"<b>Veículo:</b> {base.get('Veiculo')}", cell_style), Paragraph(f"<b>Utilização:</b> {base.get('Uso')}", cell_style)],
-        [Paragraph(f"<b>CEP Pernoite:</b> {base.get('CEP')}", cell_style), Paragraph("<b>Cobertura Condutor 18-25:</b> Não", cell_style)]
+    # 1. PERFIL
+    story.append(Paragraph("1. DADOS DO SEGURADO E PERFIL", section_style))
+    dados_perfil_table = [
+        [Paragraph(f"<b>Segurado:</b> {base.get('Segurado')}", cell_style), Paragraph(f"<b>CEP de Pernoite:</b> {base.get('CEP')}", cell_style)],
+        [Paragraph(f"<b>Principal Condutor:</b> {base.get('Condutor')}", cell_style), Paragraph(f"<b>Utilização do Veículo:</b> {base.get('Uso')}", cell_style)],
+        [Paragraph(f"<b>Condutores entre 18 e 25 anos:</b> {base.get('Condutor_Jovem')}", cell_style), Paragraph("", cell_style)]
     ]
-    t_gerais = Table(dados_gerais_table, colWidths=[280, 275])
-    t_gerais.setStyle(TableStyle([
+    t_perfil = Table(dados_perfil_table, colWidths=[280, 275])
+    t_perfil.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F5F7FA')),
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#D0D7DE')),
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E1E4E8')),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING', (0,0), (-1,-1), 3),
+        ('PADDING', (0,0), (-1,-1), 2.5),
     ]))
-    story.append(t_gerais)
-    story.append(Spacer(1, 4))
+    story.append(t_perfil)
+    story.append(Spacer(1, 3))
+
+    # 2. VEÍCULO
+    story.append(Paragraph("2. DADOS DO VEÍCULO", section_style))
+    dados_veic_table = [
+        [Paragraph(f"<b>Veículo:</b> {base.get('Veiculo')}", cell_style), Paragraph(f"<b>Ano/Modelo:</b> {base.get('Ano_Modelo')}", cell_style)],
+        [Paragraph(f"<b>Placa:</b> {base.get('Placa')}", cell_style), Paragraph(f"<b>Combustível:</b> {base.get('Combustivel')}", cell_style)],
+        [Paragraph(f"<b>Código FIPE:</b> {base.get('FIPE')}", cell_style), Paragraph(f"<b>Blindagem:</b> {base.get('Blindado')}", cell_style)]
+    ]
+    t_veic = Table(dados_veic_table, colWidths=[280, 275])
+    t_veic.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F5F7FA')),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#D0D7DE')),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E1E4E8')),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('PADDING', (0,0), (-1,-1), 2.5),
+    ]))
+    story.append(t_veic)
+    story.append(Spacer(1, 3))
     
-    # 2. COBERTURAS PRINCIPAIS
-    story.append(Paragraph("2. COBERTURAS PRINCIPAIS", section_style))
+    # 3. COBERTURAS PRINCIPAIS
+    story.append(Paragraph("3. COBERTURAS PRINCIPAIS", section_style))
     matriz_cob = [
         headers,
         [Paragraph("Casco (FIPE)", cell_style)] + [Paragraph("100%", cell_style) for _ in lista_cotacoes],
@@ -202,10 +244,10 @@ def gerar_pdf_bks(lista_cotacoes):
     t_cob = Table(matriz_cob, colWidths=widths)
     t_cob.setStyle(t_style)
     story.append(t_cob)
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 3))
 
-    # 3. CLAÚSULAS E SERVIÇOS ADICIONAIS
-    story.append(Paragraph("3. CLAÚSULAS E SERVIÇOS ADICIONAIS", section_style))
+    # 4. CLÁUSULAS E SERVIÇOS ADICIONAIS
+    story.append(Paragraph("4. CLÁUSULAS E SERVIÇOS ADICIONAIS", section_style))
     matriz_serv = [
         headers,
         [Paragraph("Franquia Casco", cell_style)] + [Paragraph(c["Franquia"], cell_style) for c in lista_cotacoes],
@@ -216,10 +258,10 @@ def gerar_pdf_bks(lista_cotacoes):
     t_serv = Table(matriz_serv, colWidths=widths)
     t_serv.setStyle(t_style)
     story.append(t_serv)
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 3))
 
-    # 4. PREÇOS E OPÇÕES DE PAGAMENTO
-    story.append(Paragraph("4. PREÇOS E OPÇÕES DE PAGAMENTO", section_style))
+    # 5. PREÇOS E OPÇÕES DE PAGAMENTO
+    story.append(Paragraph("5. PREÇOS E OPÇÕES DE PAGAMENTO", section_style))
     matriz_pag = [
         headers,
         [Paragraph("<b>Prêmio Total (À Vista)</b>", bold_cell_style)] + [Paragraph(f"<b>{c['Prêmio Total']}</b>", bold_cell_style) for c in lista_cotacoes],
